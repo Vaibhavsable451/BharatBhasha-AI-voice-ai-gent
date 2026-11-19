@@ -44,8 +44,21 @@ startup, select **Retry**. To ask about an image, choose **Add image**, select
 **Share with agent**, then ask your question by voice. Use a headset to reduce
 echo.
 
-The app stays bound to localhost; do not expose it to a network. The endpoint
-and agent name default to the values in `webapp.py`; override them with
-`AZURE_AI_PROJECT_ENDPOINT` and `AZURE_VOICE_AGENT_NAME` if needed. The
+## Deploy to Azure App Service
+
+Use the Linux Python 3.11 runtime. The app binds to `0.0.0.0` and uses the
+App Service `PORT` (defaulting to 8000 there); locally it remains bound to
+localhost. The GitHub Actions workflow deploys this repository to the
+`BharatBhashaAi` App Service.
+
+Before deploying, configure App Service Authentication with Microsoft Entra ID
+and require sign-in. The app rejects unauthenticated App Service requests using
+the `X-MS-CLIENT-PRINCIPAL` header; `/healthz` is left available for health
+probes. Enable WebSockets for realtime voice. Enable the system-assigned
+managed identity and grant it access to the Foundry project.
+
+Set `AZURE_AI_PROJECT_ENDPOINT` and `AZURE_VOICE_AGENT_NAME` as App Service
+settings if using values other than the defaults. For a custom domain, add its
+hostname to `APP_SERVICE_ALLOWED_HOSTS` as a comma-separated list. The
 configured agent's model must accept image input. Image/audio retention follows
 the existing agent and Foundry project settings; the app does not change them.

@@ -9,6 +9,7 @@ import os
 import re
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
 
 from aiohttp import WSMsgType, web
 from azure.ai.projects.aio import AIProjectClient
@@ -32,6 +33,9 @@ IMAGE_DATA_URL = re.compile(
     r"data:(image/(?:jpeg|png|webp));base64,([A-Za-z0-9+/]*={0,2})\Z"
 )
 logger = logging.getLogger(__name__)
+PORT_KEY = web.AppKey("port", int)
+APP_SERVICE_KEY = web.AppKey("app_service", bool)
+ALLOWED_HOSTS_KEY = web.AppKey("allowed_hosts", set)
 
 
 def _image_mime_from_bytes(data: bytes) -> str | None:
@@ -105,17 +109,46 @@ def _image_context_content(packet: dict[str, Any]) -> list[dict[str, str]]:
     return content
 
 
+def _hostname(value: str) -> str:
+    return (urlsplit(f"//{value.strip()}").hostname or "").lower().rstrip(".")
+
+
 @web.middleware
-async def local_only(request: web.Request, handler):
-    expected_hosts = {
-        f"127.0.0.1:{request.app['port']}",
-        f"localhost:{request.app['port']}",
-    }
-    if request.host not in expected_hosts:
-        raise web.HTTPForbidden(text="Use the localhost address printed by the server.")
+async def access_policy(request: web.Request, handler):
+    if request.app[APP_SERVICE_KEY]:
+        request_host = _hostname(request.host)
+        if request_host not in request.app[ALLOWED_HOSTS_KEY]:
+            raise web.HTTPForbidden(text="This host is not allowed.")
+        if request.path != "/healthz" and not request.headers.get(
+            "X-MS-CLIENT-PRINCIPAL"
+        ):
+            raise web.HTTPUnauthorized(text="Sign in with Microsoft Entra ID.")
+    else:
+        expected_hosts = {
+            f"127.0.0.1:{request.app[PORT_KEY]}",
+            f"localhost:{request.app[PORT_KEY]}",
+        }
+        if request.host not in expected_hosts:
+            raise web.HTTPForbidden(
+                text="Use the localhost address printed by the server."
+            )
+
     origin = request.headers.get("Origin")
-    if origin and origin != f"{request.scheme}://{request.host}":
-        raise web.HTTPForbidden(text="Cross-origin requests are not allowed.")
+    if origin:
+        if request.app[APP_SERVICE_KEY]:
+            origin_parts = urlsplit(origin)
+            forwarded_proto = request.headers.get(
+                "X-Forwarded-Proto", "https"
+            ).split(",", 1)[0].strip().lower()
+            same_origin = (
+                _hostname(origin_parts.netloc) == _hostname(request.host)
+                and origin_parts.scheme.lower() == forwarded_proto
+            )
+        else:
+            same_origin = origin == f"{request.scheme}://{request.host}"
+        if not same_origin:
+            raise web.HTTPForbidden(text="Cross-origin requests are not allowed.")
+
     response = await handler(request)
     response.headers["Cache-Control"] = "no-store"
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -339,11 +372,25 @@ async def voice(request: web.Request) -> web.WebSocketResponse:
 
 
 def create_app(port: int = 8780) -> web.Application:
+    app_service = bool(os.getenv("WEBSITE_INSTANCE_ID"))
+    allowed_hosts = {
+        _hostname(host)
+        for host in (
+            os.getenv("WEBSITE_HOSTNAME", ""),
+            *os.getenv("APP_SERVICE_ALLOWED_HOSTS", "").split(","),
+        )
+        if host.strip()
+    }
+    if app_service and not allowed_hosts:
+        raise RuntimeError("WEBSITE_HOSTNAME is required on Azure App Service.")
+
     app = web.Application(
-        middlewares=[local_only],
+        middlewares=[access_policy],
         client_max_size=MAX_BROWSER_MESSAGE,
     )
-    app["port"] = port
+    app[PORT_KEY] = port
+    app[APP_SERVICE_KEY] = app_service
+    app[ALLOWED_HOSTS_KEY] = allowed_hosts
     app.add_routes(
         [
             web.get("/", index),
@@ -361,11 +408,14 @@ def main() -> None:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
     logging.getLogger("azure").setLevel(logging.WARNING)
-    port = int(os.getenv("PORT", "8780"))
+    app_service = bool(os.getenv("WEBSITE_INSTANCE_ID"))
+    default_port = "8000" if app_service else "8780"
+    port = int(os.getenv("PORT", default_port))
     if not 1024 <= port <= 65535:
         raise ValueError("PORT must be between 1024 and 65535.")
-    print(f"Open http://127.0.0.1:{port}")
-    web.run_app(create_app(port), host="127.0.0.1", port=port, print=None)
+    host = "0.0.0.0" if app_service else "127.0.0.1"
+    print(f"Listening on {host}:{port}", flush=True)
+    web.run_app(create_app(port), host=host, port=port, print=None)
 
 
 if __name__ == "__main__":
