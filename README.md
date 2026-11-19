@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎙️ Azure Voice Agent
+# 🎙️  BharatBhasha AI Voice Agent
 
 **A voice-first browser app for talking to your existing Azure AI Foundry agent, with optional image context.**
 
