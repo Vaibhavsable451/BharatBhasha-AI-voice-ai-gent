@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#090d18">
+    <title>BharatBhasha AI · Voice Agent</title>
+    <link rel="stylesheet" href="/static/style.css">
+  </head>
+  <body>
+    <main class="shell">
+      <header class="topbar">
+        <a class="brand" href="/" aria-label="BharatBhasha AI home">
+          <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span>BharatBhasha AI <b>VOICE AGENT</b></span>
+        </a>
+        <span class="local-badge"><span></span> PRIVATE LOCAL SESSION</span>
+      </header>
+
+      <section class="workspace">
+        <aside class="intro">
+          <div class="eyebrow"><span class="eyebrow-line"></span> YOUR REAL-TIME AI</div>
+          <h1>See it.<br><em>Say it.</em></h1>
+          <p>Talk naturally with BharatBhasha AI, share an image, and ask about it aloud.</p>
+          <div class="orb-wrap" aria-hidden="true">
+            <div class="orb-halo"></div>
+            <div class="orb">
+              <span class="orb-eye left"></span><span class="orb-eye right"></span>
+              <span class="orb-mouth"></span>
+            </div>
+            <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+            <span class="orbit-dot"></span>
+          </div>
+          <div class="privacy-note">
+            <span class="privacy-icon">◈</span>
+            <span><b>Your credentials stay on this computer.</b><br>Only the audio, messages, and images you send go to Azure.</span>
+          </div>
+        </aside>
+
+        <section class="agent-panel" aria-label="Realtime voice agent">
+          <div class="panel-head">
+            <div>
+              <div class="panel-kicker">VOICE AGENT · REALTIME</div>
+              <h2>Speak with BharatBhasha AI</h2>
+            </div>
+            <div class="connection-state" id="connection-state">
+              <span class="state-dot"></span><span id="state-label">Not connected</span>
+            </div>
+          </div>
+
+          <div class="session-bar">
+            <div class="agent-avatar" aria-hidden="true"><span></span></div>
+            <div class="agent-meta"><b>BharatBhasha AI</b><span>Realtime voice assistant</span></div>
+            <button class="connect-button" id="connect-button" type="button">Connect</button>
+          </div>
+
+          <div class="voice-stage">
+            <div class="orb-wrap stage-orb" aria-hidden="true">
+              <div class="orb-halo"></div>
+              <div class="orb">
+                <span class="orb-eye left"></span><span class="orb-eye right"></span>
+                <span class="orb-mouth"></span>
+              </div>
+              <div class="orbit orbit-one"></div><div class="orbit orbit-two"></div>
+              <span class="orbit-dot"></span>
+            </div>
+            <div class="agent-state" id="agent-state">Ready to listen</div>
+            <p class="stage-hint" id="stage-hint">The voice session starts automatically. Allow microphone access to speak.</p>
+            <div class="live-caption" aria-live="polite">
+              <span>LIVE CAPTION</span>
+              <p id="caption">Your spoken conversation will appear here.</p>
+            </div>
+          </div>
+
+          <div class="image-controls">
+            <div class="image-tray" id="image-tray" hidden>
+              <div class="tray-label">READY TO SHARE <span id="image-count"></span></div>
+              <div class="image-list" id="image-list"></div>
+            </div>
+            <div class="shared-tray" id="shared-tray" hidden>
+              <div class="tray-label">IN AGENT CONTEXT <span id="shared-count"></span></div>
+              <div class="image-list" id="shared-list"></div>
+            </div>
+            <div class="image-actions">
+              <label class="upload-button" for="image-input">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>
+                <span>Add image</span>
+              </label>
+              <input id="image-input" type="file" accept="image/jpeg,image/png,image/webp" multiple hidden>
+              <button class="share-button" id="share-images" type="button" disabled>Share with agent</button>
+            </div>
+            <p class="image-hint" id="image-hint">Share photos, then ask about them by voice. Up to 5 images per session.</p>
+          </div>
+
+          <div class="voice-controls">
+            <button class="mic-button" id="mic-button" type="button" title="Connect before speaking" aria-label="Mute microphone" disabled>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3m-4 0h8"/></svg>
+            </button>
+            <span class="mic-hint" id="mic-hint">Connect to start the microphone</span>
+            <span class="voice-mode">FULL DUPLEX AUDIO</span>
+          </div>
+        </section>
+      </section>
+      <footer class="page-footer">REALTIME SPEECH · IMAGE CONTEXT · POWERED BY MICROSOFT FOUNDRY</footer>
+    </main>
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>
