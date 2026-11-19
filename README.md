@@ -1,10 +1,66 @@
-# Azure voice agent
+<div align="center">
 
-The browser app connects to the existing `cyan-agent-9j5pxwdwxs` voice agent.
-It does not create, update, or delete the agent. The separate `call_agent.py`
-script is available for a one-off text test.
+# 🎙️ Azure Voice Agent
 
-## Setup
+**A voice-first browser app for talking to your existing Azure AI Foundry agent, with optional image context.**
+
+![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)
+![Azure AI Foundry](https://img.shields.io/badge/Azure-AI%20Foundry-0078D4?logo=microsoftazure&logoColor=white)
+![Mode](https://img.shields.io/badge/mode-voice--first-8A2BE2)
+![Bind](https://img.shields.io/badge/bind-localhost%20only-success)
+![Agent](https://img.shields.io/badge/agent-read--only%20client-informational)
+
+[Quick start](#-quick-start) · [How it works](#-how-it-works) · [Images](#-share-images-with-the-agent) · [Configuration](#-configuration) · [Troubleshooting](#-troubleshooting)
+
+</div>
+
+---
+
+## ✨ Highlights
+
+- 🗣️ **Talk naturally.** The session starts automatically, mic audio streams in, and the agent replies aloud.
+- 🖼️ **Show, don't just tell.** Share up to **5 images** (JPEG, PNG, WebP) as visual context, then ask about them by voice.
+- 🔒 **Safe by design.** Binds to `127.0.0.1` only. The app **never creates, updates, or deletes** the agent.
+- 🧪 **Quick text test.** `call_agent.py` sends a one-off message from the terminal.
+
+> **Target agent:** `cyan-agent-9j5pxwdwxs` (existing, managed outside this app)
+
+---
+
+## 🧭 How it works
+
+```mermaid
+flowchart LR
+    U([👤 You]) -- "speak" --> B["🌐 Browser UI<br/>127.0.0.1:8780"]
+    B -- "mic audio + shared images" --> W["🐍 webapp.py<br/>local server"]
+    W -- "Azure identity<br/>(az login)" --> F["☁️ Azure AI Foundry<br/>project"]
+    F --> A["🤖 cyan-agent-9j5pxwdwxs<br/>(existing agent)"]
+    A -- "spoken reply" --> W
+    W -- "audio" --> B
+    B -- "plays reply" --> U
+
+    C["⌨️ call_agent.py"] -. "one-off text test" .-> F
+```
+
+| Component | Role |
+|---|---|
+| **Browser UI** | Captures the microphone, plays replies, manages image sharing |
+| **`webapp.py`** | Local bridge on `127.0.0.1:8780`; authenticates with your Azure identity |
+| **Foundry project** | Hosts the agent and applies its retention settings |
+| **`call_agent.py`** | Standalone text-only smoke test |
+
+---
+
+## 🚀 Quick start
+
+### 1. Prerequisites
+
+- Python 3.10+
+- [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli)
+- An Azure identity with permission to use the Foundry project
+- A microphone (a **headset** is recommended to avoid echo)
+
+### 2. Install
 
 ```powershell
 python -m venv .venv
@@ -13,52 +69,82 @@ python -m pip install -r requirements.txt
 az login
 ```
 
-The signed-in Azure identity must have permission to use the Foundry project.
+### 3. Run the voice app
 
-## Send a message
+```powershell
+python .\webapp.py
+```
+
+Open **<http://127.0.0.1:8780>** and allow microphone access. The voice session starts on its own. Just start talking.
+
+> If your browser's audio policy blocks auto-start, click **Retry**.
+
+---
+
+## 🖼️ Share images with the agent
+
+Images are **visual context inside the same voice session**, not text-chat prompts.
+
+1. Click **Add image** (up to 5; JPEG, PNG, or WebP).
+2. Click **Share with agent**.
+3. Ask your question **out loud**.
+
+> ⚠️ The model configured on the existing agent must support **image input**.
+
+---
+
+## 🧪 Text test (no browser)
 
 ```powershell
 python .\call_agent.py --message "Hello! Please briefly introduce yourself."
 ```
 
-Omit `--message` to be prompted interactively. The project endpoint and agent
-name are set near the top of `call_agent.py`.
+Omit `--message` to be prompted interactively. The project endpoint and agent name are defined near the top of `call_agent.py`.
 
-## Run the voice-first browser app
+---
 
-The app streams microphone audio and plays the agent's spoken replies. Add and
-share up to five JPEG, PNG, or WebP images, then ask about them aloud; images
-are visual context in that same voice session, not text-chat prompts. Images
-require an image-capable model configured on the existing agent.
+## ⚙️ Configuration
+
+Defaults live in `webapp.py`. Override them with environment variables:
+
+| Variable | Purpose |
+|---|---|
+| `AZURE_AI_PROJECT_ENDPOINT` | Foundry project endpoint |
+| `AZURE_VOICE_AGENT_NAME` | Name of the existing agent to connect to |
 
 ```powershell
-python -m pip install -r .\requirements.txt
-az login
+$env:AZURE_AI_PROJECT_ENDPOINT = "https://<your-project-endpoint>"
+$env:AZURE_VOICE_AGENT_NAME    = "cyan-agent-9j5pxwdwxs"
 python .\webapp.py
 ```
 
-Open [http://127.0.0.1:8780](http://127.0.0.1:8780) and allow microphone
-access when prompted. The voice session starts automatically; speak naturally
-and the agent responds aloud. If browser audio policy prevents automatic
-startup, select **Retry**. To ask about an image, choose **Add image**, select
-**Share with agent**, then ask your question by voice. Use a headset to reduce
-echo.
+---
 
-## Deploy to Azure App Service
+## 🛡️ Security & privacy
 
-Use the Linux Python 3.11 runtime. The app binds to `0.0.0.0` and uses the
-App Service `PORT` (defaulting to 8000 there); locally it remains bound to
-localhost. The GitHub Actions workflow deploys this repository to the
-`BharatBhashaAi` App Service.
+- **Localhost only.** The app stays bound to `127.0.0.1`. **Do not expose it to a network.**
+- **Read-only toward the agent.** It does not create, update, or delete it.
+- **Retention is not changed here.** Image and audio retention follow the existing agent and Foundry project settings.
 
-Before deploying, configure App Service Authentication with Microsoft Entra ID
-and require sign-in. The app rejects unauthenticated App Service requests using
-the `X-MS-CLIENT-PRINCIPAL` header; `/healthz` is left available for health
-probes. Enable WebSockets for realtime voice. Enable the system-assigned
-managed identity and grant it access to the Foundry project.
+---
 
-Set `AZURE_AI_PROJECT_ENDPOINT` and `AZURE_VOICE_AGENT_NAME` as App Service
-settings if using values other than the defaults. For a custom domain, add its
-hostname to `APP_SERVICE_ALLOWED_HOSTS` as a comma-separated list. The
-configured agent's model must accept image input. Image/audio retention follows
-the existing agent and Foundry project settings; the app does not change them.
+## 🩺 Troubleshooting
+
+| Symptom | Try this |
+|---|---|
+| Authentication or permission errors | Run `az login` again and confirm your identity has access to the Foundry project |
+| No audio / session doesn't start | Click **Retry**; check the browser's microphone permission |
+| Echo or feedback | Use a headset |
+| Image questions aren't understood | Confirm the agent's model accepts image input and that you clicked **Share with agent** |
+| Wrong agent or project | Set `AZURE_AI_PROJECT_ENDPOINT` / `AZURE_VOICE_AGENT_NAME` |
+
+---
+
+## 📁 Project layout
+
+```text
+.
+├── webapp.py          # Local voice-first web app (127.0.0.1:8780)
+├── call_agent.py      # One-off text test client
+└── requirements.txt   # Python dependencies
+```
